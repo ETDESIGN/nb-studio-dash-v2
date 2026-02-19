@@ -66,7 +66,8 @@ import { Shell, QuickActionButton } from './components/layout/Shell';
 import { WidgetFrame } from './components/ui/WidgetFrame';
 import { Modal } from './components/ui/Modal';
 import { Agent, ViewType, VaultFile, Services, Notification, NotificationType, NotificationAction } from './types';
-import { INITIAL_DATA, fetchMockData, generateChartData } from './mockData';
+import { INITIAL_DATA, generateChartData } from './mockData';
+import { fetchDashboardData } from './src/lib/api';
 
 // ==========================================
 // 1. SPECIFIC WIDGET RECIPES
@@ -1391,14 +1392,26 @@ const App = () => {
       setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  const { data } = useSWR('dashboard-data', fetchMockData, {
+  // Changed from fetchMockData to real fetcher
+  const { data, error } = useSWR('http://localhost:3002/api/dashboard', fetchDashboardData, {
       refreshInterval: 2000,
-      fallbackData: INITIAL_DATA
+      shouldRetryOnError: true
   });
 
   const handleHaltAgent = (id: string) => {
       notify('error', 'STOP COMMAND SENT', `Agent ${id} signal interruption sent.`);
   }
+
+  // Handle Loading/Error States explicitly
+  if (error && !data) return (
+      <div className="flex flex-col items-center justify-center h-screen bg-[#f8fafb] dark:bg-slate-950 text-slate-400 font-sans gap-4">
+          <Activity className="w-10 h-10 text-red-500 animate-pulse" />
+          <div className="text-center">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Uplink Failed</h2>
+              <p className="text-sm">Could not connect to OpenClaw Backend at port 3002.</p>
+          </div>
+      </div>
+  );
 
   if (!data) return <div className="flex items-center justify-center h-screen bg-[#f8fafb] dark:bg-slate-950 text-slate-400 font-sans">Initialize...</div>;
 
